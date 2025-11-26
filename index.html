@@ -1,0 +1,674 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QozaBugTracker</title>
+    <style>
+        /* --- CSS VARIABLES & THEMES --- */
+        :root {
+            --primary-color: #6366f1; /* Indigo */
+            --primary-hover: #4f46e5;
+            --bg-gradient: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            --card-bg: rgba(255, 255, 255, 0.85);
+            --text-main: #1f2937;
+            --text-muted: #6b7280;
+            --border-color: #e5e7eb;
+            --shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.15);
+            --modal-overlay: rgba(0, 0, 0, 0.5);
+            --font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            --transition-speed: 0.3s;
+            
+            /* FIX DLA SELECT (Tło opcji musi być pełne, nie przezroczyste) */
+            --option-bg: #ffffff;
+            /* Ciemna strzałka dla jasnego motywu */
+            --select-arrow: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%231f2937' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+            
+            /* Informacja dla przeglądarki o jasnym trybie (naprawia paski przewijania) */
+            color-scheme: light;
+        }
+
+        [data-theme="dark"] {
+            --bg-gradient: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+            --card-bg: rgba(30, 41, 59, 0.85);
+            --text-main: #f3f4f6;
+            --text-muted: #9ca3af;
+            --border-color: #374151;
+            --shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.5);
+            
+            /* FIX DLA SELECT DARK MODE */
+            --option-bg: #1e293b;
+            /* Jasna strzałka dla ciemnego motywu */
+            --select-arrow: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%23f3f4f6' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+            
+            /* Informacja dla przeglądarki o ciemnym trybie */
+            color-scheme: dark;
+        }
+
+        /* --- GLOBAL STYLES --- */
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: var(--font-family);
+            background: var(--bg-gradient);
+            color: var(--text-main);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            transition: background 0.5s ease, color 0.5s ease;
+            overflow-x: hidden;
+        }
+
+        /* --- HEADER --- */
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1rem 5%;
+            background: var(--card-bg);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border-bottom: 1px solid var(--border-color);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        }
+
+        .logo {
+            font-size: 1.5rem;
+            font-weight: 800;
+            color: var(--primary-color);
+            letter-spacing: -1px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .controls {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+        }
+
+        /* --- MAIN CONTENT --- */
+        main {
+            flex: 1;
+            display: flex;
+            justify-content: center;
+            padding: 2rem 1rem;
+        }
+
+        .form-container {
+            background: var(--card-bg);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid var(--border-color);
+            border-radius: 20px;
+            padding: 2.5rem;
+            width: 100%;
+            max-width: 800px;
+            box-shadow: var(--shadow);
+            animation: slideUp 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        h1 {
+            text-align: center;
+            margin-bottom: 2rem;
+            color: var(--primary-color);
+        }
+
+        /* --- FORM ELEMENTS --- */
+        .form-group {
+            margin-bottom: 1.5rem;
+            position: relative;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+
+        .required-mark {
+            color: #ef4444;
+        }
+
+        /* Stylowanie Inputów i Textarea */
+        input[type="text"],
+        input[type="datetime-local"],
+        textarea {
+            width: 100%;
+            padding: 0.8rem 1rem;
+            border-radius: 10px;
+            border: 2px solid var(--border-color);
+            background: rgba(255,255,255,0.05);
+            color: var(--text-main);
+            font-family: inherit;
+            font-size: 1rem;
+            
+            resize: vertical;    /* pozwala zmieniać rozmiar tylko w pionie */
+  overflow: auto; 
+        }
+
+        /* --- NOWOCZESNY SELECT (FIX) --- */
+        select {
+            width: 100%;
+            padding: 0.8rem 1rem;
+            padding-right: 2.5rem; /* Miejsce na strzałkę */
+            border-radius: 10px;
+            border: 2px solid var(--border-color);
+            background-color: rgba(255,255,255,0.05); /* Półprzezroczyste tło */
+            color: var(--text-main);
+            font-size: 1rem;
+            font-family: inherit;
+            cursor: pointer;
+            
+            /* Usunięcie systemowej strzałki */
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            appearance: none;
+            
+            /* Własna strzałka SVG */
+            background-image: var(--select-arrow);
+            background-repeat: no-repeat;
+            background-position: right 1rem center;
+            background-size: 1.2em;
+            
+            transition: all 0.2s;
+        }
+
+        /* Stylowanie opcji wewnątrz selecta (rozwiązuje problem białego tła) */
+        select option {
+            background-color: var(--option-bg);
+            color: var(--text-main);
+            padding: 10px;
+        }
+
+        /* Headerowe selecty (mniejsze) */
+        .controls select {
+            padding: 0.5rem 2rem 0.5rem 0.8rem; /* Mniejszy padding */
+            background-position: right 0.5rem center; /* Strzałka bliżej */
+            min-width: 120px;
+        }
+
+        /* Fokus dla wszystkich pól */
+        input:focus, textarea:focus, select:focus {
+            border-color: var(--primary-color);
+            outline: none;
+            box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.2);
+        }
+
+        /* Readonly */
+        input[readonly] {
+            background-color: rgba(0,0,0,0.05);
+            cursor: not-allowed;
+            color: var(--text-muted);
+            border-style: dashed;
+        }
+
+        /* Optional Section */
+        .optional-section {
+            background: rgba(0,0,0,0.02);
+            padding: 1rem;
+            border-radius: 10px;
+            margin-bottom: 1.5rem;
+            border: 1px dashed var(--border-color);
+        }
+
+        .optional-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+        }
+
+        @media (max-width: 600px) {
+            .optional-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* --- BUTTONS --- */
+        .btn-group {
+            display: flex;
+            justify-content: flex-end;
+            gap: 1rem;
+            margin-top: 2rem;
+        }
+
+        button {
+            padding: 0.8rem 2rem;
+            border-radius: 10px;
+            border: none;
+            font-weight: 700;
+            font-size: 1rem;
+            cursor: pointer;
+            font-family: inherit;
+            transition: transform 0.1s, box-shadow 0.2s;
+        }
+
+        button:active {
+            transform: scale(0.96);
+        }
+
+        .btn-clear {
+            background: transparent;
+            border: 2px solid var(--border-color);
+            color: var(--text-muted);
+        }
+
+        .btn-clear:hover {
+            border-color: #ef4444;
+            color: #ef4444;
+            background: rgba(239, 68, 68, 0.05);
+        }
+
+        .btn-send {
+            background: var(--primary-color);
+            color: white;
+            box-shadow: 0 4px 14px 0 rgba(99, 102, 241, 0.39);
+        }
+
+        .btn-send:hover {
+            background: var(--primary-hover);
+            box-shadow: 0 6px 20px rgba(99, 102, 241, 0.23);
+        }
+
+        /* --- FOOTER --- */
+        footer {
+            text-align: center;
+            padding: 1.5rem;
+            background: var(--card-bg);
+            color: var(--text-muted);
+            font-size: 0.9rem;
+            border-top: 1px solid var(--border-color);
+        }
+
+        /* --- MODAL --- */
+        .modal-backdrop {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: var(--modal-overlay);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.3s;
+            z-index: 1000;
+            backdrop-filter: blur(4px);
+        }
+
+        .modal-backdrop.active {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .modal {
+            background: var(--card-bg);
+            padding: 2rem;
+            border-radius: 15px;
+            max-width: 400px;
+            width: 90%;
+            text-align: center;
+            border: 1px solid var(--border-color);
+            transform: translateY(20px);
+            transition: transform 0.3s;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+        }
+
+        .modal-backdrop.active .modal {
+            transform: translateY(0);
+        }
+
+        .modal h3 { margin-bottom: 1rem; color: var(--text-main); }
+        .modal p { margin-bottom: 1.5rem; color: var(--text-muted); }
+        .modal-actions { display: flex; justify-content: center; gap: 1rem; }
+
+        /* --- ANIMATIONS --- */
+        @keyframes slideUp {
+            from { opacity: 0; transform: translateY(40px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+    </style>
+</head>
+<body>
+
+    <!-- Header -->
+    <header>
+        <div class="logo">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zm0 14a1 1 0 1 1-2 0 1 1 0 0 1 2 0zm0-7v3"/></svg>
+            QozaBugTracker
+        </div>
+        <div class="controls">
+            <!-- Language Switcher -->
+            <select id="langSwitcher" aria-label="Language Switcher">
+                <option value="en">English</option>
+                <option value="pl">Polski</option>
+            </select>
+            <!-- Theme Switcher -->
+            <select id="themeSwitcher" aria-label="Theme Switcher">
+                <option value="system" data-i18n="theme_system">System</option>
+                <option value="light" data-i18n="theme_light">Light</option>
+                <option value="dark" data-i18n="theme_dark">Dark</option>
+            </select>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main>
+        <div class="form-container">
+            <h1 data-i18n="form_title">Report a Bug</h1>
+            
+            <form id="bugForm" method="POST" netlify>
+                <!-- Nickname -->
+                <div class="form-group">
+                    <label for="nickname">
+                        <span data-i18n="label_nick">Nickname</span> <span class="required-mark">*</span>
+                    </label>
+                    <input type="text" id="nickname" required placeholder="Your Nickname">
+                </div>
+
+                <!-- Product Selector -->
+                <div class="form-group">
+                    <label for="product">
+                        <span data-i18n="label_product">Affected Tool/Product</span> <span class="required-mark">*</span>
+                    </label>
+                    <select id="product" required>
+                        <option value="" disabled selected data-i18n="select_placeholder">-- Select --</option>
+                        <option value="QozaWorks">QozaWorks (Main Site)</option>
+                        <option value="MineWallpapers">MineWallpapers</option>
+                        <option value="MineTunes">MineTunes</option>
+                        <option value="MineStyler">MineStyler</option>
+                    </select>
+                </div>
+
+                <!-- Bug Title -->
+                <div class="form-group">
+                    <label for="bugTitle">
+                        <span data-i18n="label_bug_title">Bug Title</span> <span class="required-mark">*</span>
+                    </label>
+                    <input type="text" id="bugTitle" required placeholder="e.g. Display issue on dashboard">
+                </div>
+
+                <!-- Description -->
+                <div class="form-group">
+                    <label for="description">
+                        <span data-i18n="label_description">Detailed Description</span> <span class="required-mark">*</span>
+                    </label>
+                    <textarea id="description" rows="5" required placeholder="Describe what happened..."></textarea>
+                </div>
+
+                <!-- Optional Info -->
+                <div class="optional-section">
+                    <label style="margin-bottom: 10px; display:block; color: var(--primary-color);" data-i18n="label_additional">Additional Information (Optional)</label>
+                    <div class="optional-grid">
+                        <div class="form-group" style="margin-bottom: 0;">
+                            <label for="version" data-i18n="label_version">Service Version</label>
+                            <input type="text" id="version" placeholder="e.g. 1.2.1">
+                        </div>
+                        <div class="form-group" style="margin-bottom: 0;">
+                            <label for="os" data-i18n="label_os">OS</label>
+                            <input type="text" id="os" placeholder="e.g. Windows 11">
+                        </div>
+                        <div class="form-group" style="margin-bottom: 0;">
+                            <label for="browser" data-i18n="label_browser">Browser</label>
+                            <input type="text" id="browser" placeholder="e.g. Chrome 120">
+                        </div>
+                        <div class="form-group" style="margin-bottom: 0;">
+                            <label for="device" data-i18n="label_device">Device</label>
+                            <input type="text" id="device" placeholder="e.g. PC / iPhone">
+                        </div>
+                    </div>
+                    <div class="form-group" style="margin-top: 1rem; margin-bottom: 0;">
+                        <label for="customInfo" data-i18n="label_custom">Other Custom Info</label>
+                        <input type="text" id="customInfo">
+                    </div>
+                </div>
+
+                <!-- Date & Time (Read Only) -->
+                <div class="form-group">
+                    <label for="datetime" data-i18n="label_date">Date & Time</label>
+                    <input type="text" id="datetime" readonly>
+                </div>
+
+                <!-- Buttons -->
+                <div class="btn-group">
+                    <button type="button" class="btn-clear" id="clearBtn" data-i18n="btn_clear">Clear Form</button>
+                    <button type="submit" class="btn-send" data-i18n="btn_send">Send Report</button>
+                </div>
+            </form>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer>
+        <p>&copy; <span id="year"></span> QozaWorks. <span data-i18n="footer_rights">All rights reserved.</span></p>
+    </footer>
+
+    <!-- Confirmation Modal -->
+    <div class="modal-backdrop" id="confirmModal">
+        <div class="modal">
+            <h3 data-i18n="modal_title">Are you sure?</h3>
+            <p data-i18n="modal_desc">This will erase all content in the form. This action cannot be undone.</p>
+            <div class="modal-actions">
+                <button type="button" class="btn-clear" id="modalCancel" data-i18n="btn_cancel">Cancel</button>
+                <button type="button" class="btn-send" id="modalConfirm" style="background-color: #ef4444;" data-i18n="btn_confirm">Yes, clear it</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- JavaScript -->
+    <script>
+        // --- TRANSLATION DATA ---
+        const translations = {
+            en: {
+                theme_system: "System",
+                theme_light: "Light",
+                theme_dark: "Dark",
+                form_title: "Report a Bug",
+                label_nick: "Nickname",
+                label_product: "Affected Tool/Product",
+                select_placeholder: "-- Select --",
+                label_bug_title: "Bug Title",
+                label_description: "Detailed Description",
+                label_additional: "Additional Information (Optional)",
+                label_version: "Service Version",
+                label_os: "OS",
+                label_browser: "Browser",
+                label_device: "Device",
+                label_custom: "Other Custom Info",
+                label_date: "Date & Time",
+                btn_clear: "Clear Form",
+                btn_send: "Send Report",
+                footer_rights: "All rights reserved.",
+                modal_title: "Are you sure?",
+                modal_desc: "This will erase all content in the form. This action cannot be undone.",
+                btn_cancel: "Cancel",
+                btn_confirm: "Yes, clear it"
+            },
+            pl: {
+                theme_system: "Systemowy",
+                theme_light: "Jasny",
+                theme_dark: "Ciemny",
+                form_title: "Zgłoś błąd",
+                label_nick: "Nazwa (Nick)",
+                label_product: "Zepsute narzędzie/strona",
+                select_placeholder: "-- Wybierz --",
+                label_bug_title: "Nazwa błędu",
+                label_description: "Dokładny opis błędu",
+                label_additional: "Informacje dodatkowe (Niewymagane)",
+                label_version: "Wersja serwisu",
+                label_os: "System operacyjny",
+                label_browser: "Przeglądarka",
+                label_device: "Komputer/Telefon",
+                label_custom: "Własne",
+                label_date: "Data i godzina",
+                btn_clear: "Wyczyść",
+                btn_send: "Wyślij",
+                footer_rights: "Wszelkie prawa zastrzeżone.",
+                modal_title: "Czy na pewno?",
+                modal_desc: "Ta akcja wyczyści cały formularz. Tego nie da się cofnąć.",
+                btn_cancel: "Anuluj",
+                btn_confirm: "Tak, wyczyść"
+            }
+        };
+
+        // --- DOM ELEMENTS ---
+        const langSwitcher = document.getElementById('langSwitcher');
+        const themeSwitcher = document.getElementById('themeSwitcher');
+        const form = document.getElementById('bugForm');
+        const nicknameInput = document.getElementById('nickname');
+        const datetimeInput = document.getElementById('datetime');
+        const clearBtn = document.getElementById('clearBtn');
+        const modal = document.getElementById('confirmModal');
+        const modalCancel = document.getElementById('modalCancel');
+        const modalConfirm = document.getElementById('modalConfirm');
+        const yearSpan = document.getElementById('year');
+
+        // --- STATE ---
+        let currentLang = 'en';
+
+        // --- INITIALIZATION ---
+        document.addEventListener('DOMContentLoaded', () => {
+            // Year
+            yearSpan.textContent = new Date().getFullYear();
+
+            // Load Nickname
+            const savedNick = localStorage.getItem('qoza_nickname');
+            if (savedNick) nicknameInput.value = savedNick;
+
+            // Date/Time
+            updateDateTime();
+            setInterval(updateDateTime, 1000);
+
+            // Theme
+            const savedTheme = localStorage.getItem('qoza_theme') || 'system';
+            themeSwitcher.value = savedTheme;
+            applyTheme(savedTheme);
+
+            // Translate (default EN)
+            updateLanguage('en');
+        });
+
+        // --- TIME FUNCTION ---
+        function updateDateTime() {
+            const now = new Date();
+            const dateStr = now.toLocaleDateString() + ' ' + now.toLocaleTimeString();
+            datetimeInput.value = dateStr;
+        }
+
+        // --- THEME HANDLING ---
+        function applyTheme(theme) {
+            const root = document.documentElement;
+            if (theme === 'system') {
+                const systemDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+                root.setAttribute('data-theme', systemDark ? 'dark' : 'light');
+            } else {
+                root.setAttribute('data-theme', theme);
+            }
+            localStorage.setItem('qoza_theme', theme);
+        }
+
+        themeSwitcher.addEventListener('change', (e) => {
+            applyTheme(e.target.value);
+        });
+
+        window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', e => {
+            if (themeSwitcher.value === 'system') {
+                applyTheme('system');
+            }
+        });
+
+        // --- LANGUAGE HANDLING ---
+        function updateLanguage(lang) {
+            currentLang = lang;
+            const texts = translations[lang];
+            
+            document.querySelectorAll('[data-i18n]').forEach(el => {
+                const key = el.getAttribute('data-i18n');
+                if (texts[key]) {
+                    el.textContent = texts[key];
+                }
+            });
+
+            // Update placeholders
+            if(lang === 'pl') {
+                document.getElementById('nickname').placeholder = "Twój Nick";
+                document.getElementById('bugTitle').placeholder = "np. Źle się wyświetla panel";
+                document.getElementById('description').placeholder = "Opisz co się stało...";
+            } else {
+                document.getElementById('nickname').placeholder = "Your Nickname";
+                document.getElementById('bugTitle').placeholder = "e.g. Display issue on dashboard";
+                document.getElementById('description').placeholder = "Describe what happened...";
+            }
+        }
+
+        langSwitcher.addEventListener('change', (e) => {
+            updateLanguage(e.target.value);
+        });
+
+        // --- FORM HANDLING ---
+        form.addEventListener('submit', (e) => {
+            e.preventDefault();
+            
+            // Save nickname
+            localStorage.setItem('qoza_nickname', nicknameInput.value);
+
+            // Simulation
+            const btn = form.querySelector('.btn-send');
+            const originalText = btn.textContent;
+            
+            btn.textContent = currentLang === 'pl' ? 'Wysłano!' : 'Sent!';
+            btn.style.backgroundColor = '#10b981';
+            btn.disabled = true;
+
+            const formData = new FormData(form);
+            const data = {};
+            formData.forEach((value, key) => data[key] = value);
+            console.log('Report sent:', data);
+
+            setTimeout(() => {
+                btn.textContent = originalText;
+                btn.style.backgroundColor = '';
+                btn.disabled = false;
+                alert(currentLang === 'pl' ? 'Zgłoszenie zostało wysłane!' : 'Report has been sent successfully!');
+                
+                const savedNick = nicknameInput.value;
+                form.reset();
+                nicknameInput.value = savedNick;
+                updateDateTime();
+            }, 1500);
+        });
+
+        // --- MODAL & CLEAR LOGIC ---
+        clearBtn.addEventListener('click', () => {
+            modal.classList.add('active');
+        });
+
+        modalCancel.addEventListener('click', () => {
+            modal.classList.remove('active');
+        });
+
+        modalConfirm.addEventListener('click', () => {
+            const savedNick = nicknameInput.value;
+            form.reset();
+            nicknameInput.value = savedNick; 
+            updateDateTime();
+            modal.classList.remove('active');
+        });
+
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) {
+                modal.classList.remove('active');
+            }
+        });
+    </script>
+</body>
+</html>
